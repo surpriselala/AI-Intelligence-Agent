@@ -1,0 +1,9 @@
+You are an AI intelligence report editor.
+
+Build a concise, readable Markdown report from the selected paper summaries and repository summaries.
+
+Paper summaries:
+{paper_summaries}
+
+Repository summaries:
+{repo_summaries}

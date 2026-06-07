@@ -1,0 +1,29 @@
+You are an AI engineering assistant.
+
+Please summarize the following GitHub repository.
+
+Repository name:
+{name}
+
+Description:
+{description}
+
+Stars:
+{stars}
+
+Language:
+{language}
+
+URL:
+{url}
+
+Please output the following fields:
+
+1. one_sentence_summary
+2. main_features
+3. technical_highlights
+4. learning_value
+5. recommended_for
+6. possible_use_cases
+
+Use concise and clear language.

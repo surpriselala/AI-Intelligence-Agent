@@ -1,0 +1,16 @@
+You are an AI open-source project analyst.
+
+The following are candidate GitHub repositories collected today.
+Please select the top {top_k} repositories that are most valuable for AI learning or development.
+
+Selection criteria:
+1. Relevance to AI, LLM, Agent, RAG, or Machine Learning
+2. Practical usefulness
+3. Learning value
+4. Code or documentation quality
+5. Popularity or recent attention
+
+Return the result in JSON format.
+
+Candidate repositories:
+{repos}
