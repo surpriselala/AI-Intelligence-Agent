@@ -1,0 +1,21 @@
+You are an AI research assistant.
+
+Please summarize the following paper in a clear and structured way.
+
+Paper title:
+{title}
+
+Abstract:
+{abstract}
+
+Please output the following fields:
+
+1. one_sentence_summary
+2. research_problem
+3. core_method
+4. key_innovation
+5. why_it_matters
+6. potential_application
+7. learning_value
+
+Use concise and clear language.

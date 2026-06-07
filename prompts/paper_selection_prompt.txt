@@ -1,0 +1,16 @@
+You are an AI research intelligence analyst.
+
+The following are candidate AI research papers collected today.
+Please select the top {top_k} papers that are most worth reading.
+
+Selection criteria:
+1. Relevance to AI, LLM, Agent, RAG, Multimodal AI, AI Coding, or Machine Learning
+2. Novelty of the idea
+3. Potential impact on AI development
+4. Learning value for AI developers or students
+5. Practical or research significance
+
+Return the result in JSON format.
+
+Candidate papers:
+{papers}
