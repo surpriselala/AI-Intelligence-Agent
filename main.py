@@ -2,12 +2,13 @@
 
 from agents.github_agent import select_important_repositories, summarize_repository
 from agents.paper_agent import select_important_papers, summarize_paper
-from agents.report_agent import build_daily_report, save_report
+from agents.report_agent import build_daily_report, get_daily_report_path, save_report
 from config import (
     AI_KEYWORDS,
     ARXIV_MAX_RESULTS,
     GITHUB_MAX_RESULTS,
-    REPORT_OUTPUT_PATH,
+    REPORT_FILENAME_PREFIX,
+    REPORT_OUTPUT_DIR,
     SELECTION_TOP_K,
 )
 from tools.arxiv_tool import search_arxiv_papers
@@ -31,8 +32,12 @@ def main() -> None:
         paper_summaries=paper_summaries,
         repo_summaries=repo_summaries,
     )
-    save_report(report, REPORT_OUTPUT_PATH)
-    print(f"Report saved to {REPORT_OUTPUT_PATH}")
+    output_path = get_daily_report_path(
+        output_dir=REPORT_OUTPUT_DIR,
+        filename_prefix=REPORT_FILENAME_PREFIX,
+    )
+    save_report(report, output_path)
+    print(f"Report saved to {output_path}")
 
 
 if __name__ == "__main__":
