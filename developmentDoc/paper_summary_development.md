@@ -563,3 +563,538 @@ paper_summaries = [summarize_paper(paper) for paper in selected_papers]
 ```
 
 这个功能的核心是：把 arXiv 的原始论文摘要变成更适合日报阅读的中英结构化内容。
+
+---
+
+# 本次开发细节
+
+本次开发完成了第二个功能的核心实现：论文筛选与结构化总结。
+
+实现策略是：
+
+```text
+1. 有 OPENAI_API_KEY 时，优先使用 OpenAI 做论文筛选和结构化总结
+2. 没有 OPENAI_API_KEY 时，使用本地关键词打分和 fallback 总结
+3. 不论 LLM 是否可用，main.py 都应该可以继续生成日报
+```
+
+---
+
+## 1. 修改文件
+
+```text
+agents/paper_agent.py
+config.py
+tests/test_paper_agent.py
+developmentDoc/paper_summary_development.md
+```
+
+---
+
+## 2. 配置项
+
+位置：
+
+```text
+config.py
+```
+
+新增配置：
+
+```python
+OPENAI_PAPER_SELECTION_MODEL = "gpt-4o-mini"
+OPENAI_PAPER_SUMMARY_MODEL = "gpt-4o-mini"
+```
+
+作用：
+
+```text
+OPENAI_PAPER_SELECTION_MODEL:
+    用于论文筛选。
+
+OPENAI_PAPER_SUMMARY_MODEL:
+    用于论文结构化总结。
+```
+
+环境变量覆盖：
+
+```text
+OPENAI_PAPER_SELECTION_MODEL
+OPENAI_PAPER_SUMMARY_MODEL
+```
+
+如果环境变量存在，会优先使用环境变量中的模型名。
+
+---
+
+## 3. 实现的函数
+
+### 3.1 select_important_papers()
+
+位置：
+
+```text
+agents/paper_agent.py
+```
+
+函数签名：
+
+```python
+def select_important_papers(
+    papers: list[dict[str, Any]],
+    top_k: int = 3,
+) -> list[dict[str, Any]]:
+    ...
+```
+
+作用：
+
+```text
+从 arXiv 返回的候选论文中选出最值得进入日报的 top_k 篇。
+```
+
+接收参数：
+
+```text
+papers:
+    arXiv 论文列表。
+
+top_k:
+    需要选出的论文数量。
+```
+
+输出：
+
+```text
+list[dict[str, Any]]
+```
+
+执行逻辑：
+
+```text
+1. 如果 papers 为空，返回 []
+2. 如果 top_k <= 0，返回 []
+3. 如果配置了 OPENAI_API_KEY，尝试调用 _select_papers_with_openai()
+4. 如果 OpenAI 筛选失败或未配置 key，调用 _select_papers_with_keyword_score()
+```
+
+---
+
+### 3.2 summarize_paper()
+
+位置：
+
+```text
+agents/paper_agent.py
+```
+
+函数签名：
+
+```python
+def summarize_paper(paper: dict[str, Any]) -> dict[str, Any]:
+    ...
+```
+
+作用：
+
+```text
+把单篇论文转换成 report_agent.py 可以直接展示的结构化 summary dict。
+```
+
+接收参数：
+
+```text
+paper:
+    单篇 arXiv 论文 dict。
+```
+
+输出：
+
+```python
+{
+    "title": "...",
+    "one_sentence_summary": "...",
+    "chinese_summary": "...",
+    "research_problem": "...",
+    "core_method": "...",
+    "innovation": "...",
+    "why_it_matters": "...",
+    "learning_value": "...",
+    "url": "..."
+}
+```
+
+执行逻辑：
+
+```text
+1. 如果配置了 OPENAI_API_KEY，尝试调用 _summarize_paper_with_openai()
+2. 如果 LLM 总结成功，用 _merge_paper_summary() 合并元数据和总结字段
+3. 如果没有 key 或 LLM 失败，使用 fallback 总结
+4. fallback 中 one_sentence_summary 使用原始 abstract
+5. fallback 中 chinese_summary 尝试翻译，失败则返回提示文案
+```
+
+---
+
+### 3.3 _get_openai_api_key()
+
+函数签名：
+
+```python
+def _get_openai_api_key() -> str | None:
+    ...
+```
+
+作用：
+
+```text
+从 .env 或系统环境变量中读取 OPENAI_API_KEY。
+```
+
+输出：
+
+```text
+如果存在 key，返回字符串。
+如果不存在，返回 None。
+```
+
+技术点：
+
+```text
+使用 python-dotenv 的 load_dotenv() 读取 .env。
+```
+
+---
+
+### 3.4 _select_papers_with_keyword_score()
+
+函数签名：
+
+```python
+def _select_papers_with_keyword_score(
+    papers: list[dict[str, Any]],
+    top_k: int,
+) -> list[dict[str, Any]]:
+    ...
+```
+
+作用：
+
+```text
+在没有 LLM 的情况下，用本地关键词相关性打分筛选论文。
+```
+
+打分来源：
+
+```text
+1. config.py 中的 AI_KEYWORDS
+2. 额外关键词：llm、agent、rag、transformer、machine learning
+```
+
+规则：
+
+```text
+1. 关键词出现在 title 中，加 3 分
+2. 关键词出现在 summary 中，加 1 分
+3. 如果所有论文分数都是 0，保持原始顺序返回前 top_k 篇
+```
+
+为什么需要这个函数：
+
+```text
+arXiv 最新结果有时会混入不够相关的论文。
+即使没有 OpenAI key，也应该尽量优先选择和 AI 更相关的论文。
+```
+
+---
+
+### 3.5 _score_paper_relevance()
+
+函数签名：
+
+```python
+def _score_paper_relevance(paper: dict[str, Any]) -> int:
+    ...
+```
+
+作用：
+
+```text
+计算单篇论文和 AI 主题的相关性分数。
+```
+
+接收参数：
+
+```text
+paper:
+    单篇论文 dict，主要读取 title 和 summary 字段。
+```
+
+输出：
+
+```text
+int 分数。
+```
+
+---
+
+### 3.6 _select_papers_with_openai()
+
+函数签名：
+
+```python
+def _select_papers_with_openai(
+    papers: list[dict[str, Any]],
+    top_k: int,
+    api_key: str,
+) -> list[dict[str, Any]]:
+    ...
+```
+
+作用：
+
+```text
+调用 OpenAI，根据相关性、创新性、影响力和学习价值筛选论文。
+```
+
+接收参数：
+
+```text
+papers:
+    候选论文列表。
+
+top_k:
+    最多返回多少篇。
+
+api_key:
+    OpenAI API key。
+```
+
+OpenAI 返回格式：
+
+```json
+{
+    "selected_indices": [0, 1, 2]
+}
+```
+
+错误处理：
+
+```text
+如果 OpenAI 调用失败、JSON 解析失败或返回内容不可用，返回 []。
+外层 select_important_papers() 会自动切换到本地关键词筛选。
+```
+
+---
+
+### 3.7 _summarize_paper_with_openai()
+
+函数签名：
+
+```python
+def _summarize_paper_with_openai(
+    paper: dict[str, Any],
+    api_key: str,
+) -> dict[str, Any] | None:
+    ...
+```
+
+作用：
+
+```text
+调用 OpenAI 生成单篇论文的结构化总结。
+```
+
+OpenAI 期望返回字段：
+
+```text
+one_sentence_summary
+chinese_summary
+research_problem
+core_method
+innovation
+why_it_matters
+learning_value
+```
+
+输出：
+
+```text
+成功时返回 dict。
+失败时返回 None。
+```
+
+---
+
+### 3.8 _merge_paper_summary()
+
+函数签名：
+
+```python
+def _merge_paper_summary(
+    paper: dict[str, Any],
+    generated_summary: dict[str, Any],
+) -> dict[str, Any]:
+    ...
+```
+
+作用：
+
+```text
+把 LLM 生成的 summary 字段和原始论文 metadata 合并。
+```
+
+保留字段：
+
+```text
+title
+url
+```
+
+注意：
+
+```text
+如果 generated_summary 已经包含 chinese_summary，就不会再额外调用翻译函数。
+这样可以减少不必要的 OpenAI 调用。
+```
+
+---
+
+### 3.9 _call_openai_json()
+
+函数签名：
+
+```python
+def _call_openai_json(
+    api_key: str,
+    model: str,
+    system_message: str,
+    user_message: str,
+) -> dict[str, Any]:
+    ...
+```
+
+作用：
+
+```text
+统一调用 OpenAI Chat Completions，并解析 JSON object 返回。
+```
+
+技术点：
+
+```text
+1. 使用 OpenAI Python SDK
+2. 使用 response_format={"type": "json_object"}
+3. 使用 json.loads() 解析返回内容
+4. 如果返回为空或不是 JSON object，抛出异常
+```
+
+为什么单独封装：
+
+```text
+论文筛选和论文总结都需要 JSON 输出。
+封装后可以减少重复代码，也方便后续 GitHub agent 复用类似模式。
+```
+
+---
+
+### 3.10 _translate_text_to_chinese()
+
+本函数在之前已有基础实现，本次继续保留。
+
+作用：
+
+```text
+在 fallback 路径中，把英文 abstract 翻译成中文。
+```
+
+注意：
+
+```text
+如果没有 OPENAI_API_KEY，返回 CHINESE_SUMMARY_FALLBACK。
+```
+
+---
+
+## 4. 测试细节
+
+测试文件：
+
+```text
+tests/test_paper_agent.py
+```
+
+本次补充和验证的测试：
+
+```text
+1. 空 papers 或 top_k <= 0 返回 []
+2. 没有 API key 时使用关键词打分筛选
+3. 没有关键词命中时保持原始顺序
+4. relevance score 可以正确识别 LLM、agent、RAG 等关键词
+5. summarize_paper() 输出 chinese_summary
+6. 有 API key 时 summarize_paper() 可以使用 LLM 结构化结果
+7. _merge_paper_summary() 保留 title 和 url
+8. 未配置 API key 时中文翻译返回 fallback
+9. 空文本返回 "待补充"
+```
+
+测试原则：
+
+```text
+1. 单元测试不真实调用 OpenAI API
+2. 使用 mock/patch 替代外部 API
+3. 所有 fallback 分支都要可测试
+```
+
+---
+
+## 5. 本次验收结果
+
+已通过：
+
+```bash
+.venv/bin/python -m unittest discover -s tests
+.venv/bin/python -m compileall -q .
+```
+
+主流程 fallback 验证：
+
+```bash
+env OPENAI_API_KEY= .venv/bin/python main.py
+```
+
+生成文件：
+
+```text
+outputs/daily_ai_report_2026-06-09.md
+```
+
+本地关键词筛选结果已经能优先选择更相关的 AI 论文，例如：
+
+```text
+1. OmniGameArena: A Unified UE5 Benchmark for VLM Game Agents with Improvement Dynamics
+2. Rethinking the Divergence Regularization in LLM RL
+3. Latent Spatial Memory for Video World Models
+```
+
+---
+
+## 6. 当前限制
+
+```text
+1. 没有 OPENAI_API_KEY 时，结构化字段仍然是 fallback 内容
+2. 有 OPENAI_API_KEY 时才会生成真正的 LLM 结构化总结
+3. 真实 OpenAI 调用没有放进自动化测试，避免产生费用和网络不稳定
+4. 当前还没有保存历史记录，可能会重复推荐同一篇论文
+```
+
+---
+
+## 7. 下一步建议
+
+```text
+1. 配置 .env 中的 OPENAI_API_KEY
+2. 运行 main.py，验证真实 LLM 结构化总结
+3. 如果效果稳定，再把 GitHub 项目总结也按类似方式实现
+4. 后续增加 history 机制，避免日报重复推荐旧论文
+```
