@@ -1,0 +1,565 @@
+# Paper Summary Development Document
+
+本文档用于记录 AI Intelligence Agent 第二个功能：论文筛选与论文总结。
+
+第一个功能已经完成了从 arXiv 获取论文数据，本功能的目标是在此基础上，让 `paper_agent.py` 对论文进行筛选、英文结构化总结和中文摘要生成，最后交给 `report_agent.py` 写入每日 Markdown 报告。
+
+---
+
+## 1. 功能目标
+
+本功能需要完成：
+
+```text
+输入：arXiv 获取到的论文列表
+处理：筛选重要论文，并生成结构化总结
+输出：report_agent.py 可直接使用的 paper_summaries
+```
+
+输入示例：
+
+```python
+[
+    {
+        "title": "Paper title",
+        "authors": ["Author A", "Author B"],
+        "summary": "Paper abstract",
+        "published_date": "2026-06-08",
+        "url": "https://arxiv.org/abs/xxxx.xxxxx"
+    }
+]
+```
+
+输出示例：
+
+```python
+[
+    {
+        "title": "Paper title",
+        "one_sentence_summary": "One sentence English summary.",
+        "chinese_summary": "中文摘要。",
+        "research_problem": "Problem this paper studies.",
+        "core_method": "Core method.",
+        "innovation": "Key innovation.",
+        "why_it_matters": "Why it matters.",
+        "learning_value": "Learning value.",
+        "url": "https://arxiv.org/abs/xxxx.xxxxx"
+    }
+]
+```
+
+---
+
+## 2. 本阶段不做什么
+
+为了控制复杂度，本阶段暂时不做：
+
+```text
+1. 不做多 Agent 协作
+2. 不接向量数据库
+3. 不保存论文历史记录
+4. 不抓取 PDF 全文
+5. 不做复杂 citation 分析
+6. 不做自动邮件或 Notion 推送
+7. 不做长篇中文深度解读
+```
+
+当前目标是先让“论文摘要能被 LLM 结构化处理”，不是追求最终内容质量一步到位。
+
+---
+
+## 3. 涉及文件
+
+主要实现文件：
+
+```text
+agents/paper_agent.py
+```
+
+可能需要调整的文件：
+
+```text
+config.py
+prompts/paper_selection_prompt.txt
+prompts/paper_summary_prompt.txt
+tests/test_paper_agent.py
+main.py
+agents/report_agent.py
+```
+
+本阶段优先改：
+
+```text
+1. agents/paper_agent.py
+2. tests/test_paper_agent.py
+3. config.py
+4. prompts/paper_summary_prompt.txt
+```
+
+---
+
+## 4. 推荐技术方案
+
+### 4.1 OpenAI API
+
+推荐使用 `openai` Python SDK。
+
+原因：
+
+```text
+1. requirements.txt 中已经包含 openai
+2. 适合处理摘要、翻译和结构化输出
+3. 后续可以统一扩展到 GitHub 项目总结和新闻总结
+4. 可以用环境变量 OPENAI_API_KEY 管理密钥
+```
+
+当前项目已经使用：
+
+```text
+python-dotenv
+openai
+```
+
+`.env` 示例：
+
+```text
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_TRANSLATION_MODEL=gpt-4o-mini
+```
+
+注意：
+
+```text
+.env 不应该提交到 Git。
+```
+
+---
+
+## 5. 开发流程
+
+### Step 1: 明确 paper_agent.py 的边界
+
+`paper_agent.py` 只负责论文数据处理，不负责：
+
+```text
+1. 从 arXiv 获取论文
+2. 写 Markdown 文件
+3. 保存 outputs
+4. 获取 GitHub 项目
+```
+
+数据流应该是：
+
+```text
+tools/arxiv_tool.py
+   ↓
+agents/paper_agent.py
+   ↓
+agents/report_agent.py
+```
+
+---
+
+### Step 2: 实现论文筛选函数
+
+函数：
+
+```python
+def select_important_papers(
+    papers: list[dict[str, Any]],
+    top_k: int = 3,
+) -> list[dict[str, Any]]:
+    ...
+```
+
+作用：
+
+```text
+从候选论文中选出最值得阅读的 top_k 篇。
+```
+
+接收参数：
+
+```text
+papers:
+    arxiv_tool.py 返回的论文列表。
+
+top_k:
+    最多选出多少篇论文。
+```
+
+输出：
+
+```text
+list[dict[str, Any]]
+```
+
+第一版策略：
+
+```text
+先返回 papers[:top_k]，保持工作流简单稳定。
+```
+
+后续升级策略：
+
+```text
+1. 使用 LLM 按相关性、创新性、影响力和学习价值排序
+2. 使用关键词规则预过滤非 AI 论文
+3. 根据 published_date、title、summary 做轻量去重
+```
+
+---
+
+### Step 3: 实现单篇论文总结函数
+
+函数：
+
+```python
+def summarize_paper(paper: dict[str, Any]) -> dict[str, Any]:
+    ...
+```
+
+作用：
+
+```text
+把一篇 arXiv 论文转换成 report_agent.py 需要的结构化 summary dict。
+```
+
+接收参数：
+
+```text
+paper:
+    一篇论文的 dict，至少应该包含 title、summary、url。
+```
+
+输出：
+
+```python
+{
+    "title": "...",
+    "one_sentence_summary": "...",
+    "chinese_summary": "...",
+    "research_problem": "...",
+    "core_method": "...",
+    "innovation": "...",
+    "why_it_matters": "...",
+    "learning_value": "...",
+    "url": "..."
+}
+```
+
+第一版策略：
+
+```text
+1. one_sentence_summary 暂时使用原始 abstract
+2. chinese_summary 使用 OpenAI 翻译 abstract
+3. research_problem、core_method、innovation 等字段暂时保留 TBD
+```
+
+后续升级策略：
+
+```text
+使用 LLM 一次性生成完整 JSON，包括英文结构化字段和中文摘要。
+```
+
+---
+
+### Step 4: 实现中文摘要翻译函数
+
+推荐内部函数：
+
+```python
+def _translate_text_to_chinese(text: str) -> str:
+    ...
+```
+
+作用：
+
+```text
+把英文论文摘要翻译成简洁、准确的中文。
+```
+
+接收参数：
+
+```text
+text:
+    英文论文 abstract。
+```
+
+输出：
+
+```text
+中文摘要字符串。
+```
+
+处理流程：
+
+```text
+1. text 为空时返回 "待补充"
+2. 读取 .env 和环境变量
+3. 如果没有 OPENAI_API_KEY，返回 fallback 文案
+4. 如果有 OPENAI_API_KEY，调用 OpenAI API 翻译
+5. 如果 API 调用失败，打印错误并返回 fallback 文案
+```
+
+fallback 文案：
+
+```python
+CHINESE_SUMMARY_FALLBACK = "待配置 OPENAI_API_KEY 后生成中文摘要。"
+```
+
+为什么需要 fallback：
+
+```text
+1. 没有 API key 时项目仍然能跑
+2. 网络失败时 main.py 不会整体崩溃
+3. 单元测试不需要真实调用 LLM
+```
+
+---
+
+### Step 5: OpenAI 调用设计
+
+推荐 prompt：
+
+```text
+System:
+You translate AI research paper abstracts into clear, concise Simplified Chinese.
+
+User:
+请将下面的论文摘要翻译成简洁、准确的中文。
+只输出中文译文，不要添加额外说明。
+
+{abstract}
+```
+
+推荐参数：
+
+```python
+temperature=0.2
+```
+
+原因：
+
+```text
+翻译任务更需要稳定和准确，不需要太强随机性。
+```
+
+推荐模型配置：
+
+```python
+OPENAI_TRANSLATION_MODEL = "gpt-4o-mini"
+```
+
+也允许通过环境变量覆盖：
+
+```text
+OPENAI_TRANSLATION_MODEL=gpt-4o-mini
+```
+
+---
+
+## 6. 错误处理策略
+
+需要处理：
+
+```text
+1. paper 缺少 title
+2. paper 缺少 summary
+3. paper 缺少 url
+4. OPENAI_API_KEY 未配置
+5. OpenAI API 调用失败
+6. OpenAI 返回空内容
+```
+
+推荐策略：
+
+```text
+1. title 缺失时使用 "Untitled paper"
+2. summary 缺失时使用 "Summary will be generated by the LLM."
+3. url 缺失时使用空字符串
+4. OPENAI_API_KEY 未配置时返回 fallback
+5. API 调用失败时打印错误并返回 fallback
+6. API 返回空内容时返回 fallback
+```
+
+原则：
+
+```text
+paper_agent.py 不能因为单篇论文总结失败导致整个日报生成失败。
+```
+
+---
+
+## 7. 测试计划
+
+测试文件：
+
+```text
+tests/test_paper_agent.py
+```
+
+### 7.1 测试 summarize_paper() 输出中文摘要字段
+
+目标：
+
+```text
+确认 summarize_paper() 返回的 dict 中包含 chinese_summary。
+```
+
+测试方式：
+
+```text
+mock _translate_text_to_chinese()，避免真实调用 OpenAI。
+```
+
+---
+
+### 7.2 测试未配置 API key 时返回 fallback
+
+目标：
+
+```text
+确认 OPENAI_API_KEY 不存在时，翻译函数不会报错，而是返回 fallback。
+```
+
+测试方式：
+
+```text
+使用 patch.dict("os.environ", {}, clear=True) 清空环境变量。
+```
+
+---
+
+### 7.3 测试空文本处理
+
+目标：
+
+```text
+确认空字符串或全空格文本返回 "待补充"。
+```
+
+---
+
+### 7.4 不建议默认测试真实 OpenAI API
+
+原因：
+
+```text
+1. 需要 API key
+2. 会产生费用
+3. 网络可能不稳定
+4. CI 环境不一定配置密钥
+```
+
+真实调用可以手动测试：
+
+```bash
+.venv/bin/python -c "from agents.paper_agent import summarize_paper; print(summarize_paper({'title':'Test','summary':'This paper studies AI agents.','url':'https://example.com'}))"
+```
+
+---
+
+## 8. 和 report_agent.py 的关系
+
+`report_agent.py` 中文报告部分会优先读取：
+
+```text
+chinese_summary
+```
+
+如果没有这个字段，会退回到：
+
+```text
+one_sentence_summary
+```
+
+所以 paper_agent.py 需要尽量保证输出中包含：
+
+```text
+chinese_summary
+```
+
+当前关系：
+
+```text
+summarize_paper()
+   ↓
+paper_summaries
+   ↓
+build_daily_report()
+   ↓
+中文报告摘要字段
+```
+
+---
+
+## 9. 和 main.py 的关系
+
+`main.py` 中当前调用方式：
+
+```python
+selected_papers = select_important_papers(papers, top_k=SELECTION_TOP_K)
+paper_summaries = [summarize_paper(paper) for paper in selected_papers]
+```
+
+也就是说：
+
+```text
+只要 summarize_paper() 输出 chinese_summary，报告中就可以显示中文摘要。
+```
+
+---
+
+## 10. 验收标准
+
+本功能完成后，需要满足：
+
+```text
+1. python -m unittest discover -s tests 可以通过
+2. python -m compileall -q . 可以通过
+3. summarize_paper() 输出包含 chinese_summary
+4. 没有 OPENAI_API_KEY 时 main.py 仍然可以运行
+5. 有 OPENAI_API_KEY 时中文报告中的摘要是真正中文翻译
+6. daily_ai_report_YYYY-MM-DD.md 中存在英文版和中文版
+7. 中文版摘要字段不再直接复用英文摘要
+```
+
+---
+
+## 11. 后续扩展方向
+
+当前只翻译摘要，后续可以继续升级为完整论文总结：
+
+```text
+1. 用 LLM 生成 one_sentence_summary，而不是直接使用 abstract
+2. 生成 research_problem
+3. 生成 core_method
+4. 生成 innovation
+5. 生成 why_it_matters
+6. 生成 learning_value
+7. 同时生成中文字段，如 chinese_research_problem
+8. 要求 LLM 返回 JSON，减少 report_agent.py 的文本拼接复杂度
+```
+
+推荐下一步：
+
+```text
+先把摘要翻译稳定跑通，再把 summarize_paper() 升级为完整 JSON 结构化总结。
+```
+
+---
+
+## 12. 实现时的注意事项
+
+```text
+1. 不要把 API key 写进代码
+2. 不要把 .env 提交到 Git
+3. 不要在单元测试中真实调用 OpenAI API
+4. LLM 调用失败时返回 fallback，不要中断 main.py
+5. 保持 summarize_paper() 输出字段稳定
+6. report_agent.py 只负责展示，不负责调用 LLM
+7. paper_agent.py 不负责获取 arXiv 数据
+```
+
+这个功能的核心是：把 arXiv 的原始论文摘要变成更适合日报阅读的中英结构化内容。
