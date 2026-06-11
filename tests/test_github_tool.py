@@ -1,8 +1,14 @@
 import unittest
+from base64 import b64encode
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from tools.github_tool import _normalize_text, _repository_to_dict, search_github_repositories
+from tools.github_tool import (
+    _normalize_text,
+    _repository_to_dict,
+    fetch_repository_readme,
+    search_github_repositories,
+)
 
 
 class GithubToolTest(unittest.TestCase):
@@ -37,6 +43,9 @@ class GithubToolTest(unittest.TestCase):
             "html_url": "https://github.com/owner/useful-ai-agent",
             "created_at": "2026-06-07T00:00:00Z",
             "updated_at": "2026-06-08T00:00:00Z",
+            "topics": ["llm", "ai-agent"],
+            "homepage": "https://example.com",
+            "license": {"spdx_id": "MIT"},
         }
         fake_response = SimpleNamespace(
             raise_for_status=lambda: None,
@@ -58,6 +67,9 @@ class GithubToolTest(unittest.TestCase):
                     "url": "https://github.com/owner/useful-ai-agent",
                     "created_at": "2026-06-07T00:00:00Z",
                     "updated_at": "2026-06-08T00:00:00Z",
+                    "topics": ["llm", "ai-agent"],
+                    "homepage": "https://example.com",
+                    "license": "MIT",
                 }
             ],
         )
@@ -80,9 +92,37 @@ class GithubToolTest(unittest.TestCase):
         self.assertEqual(repo["description"], "")
         self.assertEqual(repo["stars"], 0)
         self.assertEqual(repo["language"], "")
+        self.assertEqual(repo["topics"], [])
+        self.assertEqual(repo["homepage"], "")
+        self.assertEqual(repo["license"], "")
 
     def test_normalize_text_collapses_whitespace(self) -> None:
         self.assertEqual(_normalize_text("A\n  B\tC"), "A B C")
+
+    def test_fetch_repository_readme_decodes_base64_content(self) -> None:
+        readme_text = "# Project\n\nUseful AI project."
+        encoded = b64encode(readme_text.encode("utf-8")).decode("ascii")
+        fake_response = SimpleNamespace(
+            raise_for_status=lambda: None,
+            json=lambda: {"encoding": "base64", "content": encoded},
+        )
+        fake_requests = SimpleNamespace(get=lambda *args, **kwargs: fake_response)
+
+        with patch.dict("sys.modules", {"requests": fake_requests}):
+            readme = fetch_repository_readme("owner/repo", max_chars=12)
+
+        self.assertEqual(readme, "# Project\n\nU")
+
+    def test_fetch_repository_readme_returns_empty_on_request_error(self) -> None:
+        def raise_error(*args, **kwargs):
+            raise RuntimeError("network failed")
+
+        fake_requests = SimpleNamespace(get=raise_error)
+
+        with patch.dict("sys.modules", {"requests": fake_requests}):
+            readme = fetch_repository_readme("owner/repo")
+
+        self.assertEqual(readme, "")
 
 
 if __name__ == "__main__":

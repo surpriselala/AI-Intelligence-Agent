@@ -8,14 +8,23 @@ Paper title:
 Abstract:
 {abstract}
 
-Please output the following fields:
+Please return JSON only with the following string fields:
 
 1. one_sentence_summary
-2. research_problem
-3. core_method
-4. key_innovation
-5. why_it_matters
-6. potential_application
-7. learning_value
+2. chinese_summary
+3. research_problem
+4. chinese_research_problem
+5. core_method
+6. chinese_core_method
+7. innovation
+8. chinese_innovation
+9. why_it_matters
+10. chinese_why_it_matters
+11. learning_value
+12. chinese_learning_value
 
-Use concise and clear language.
+Rules:
+1. English fields should be concise English.
+2. Chinese fields should be natural Simplified Chinese sentences.
+3. Keep model names, method names, benchmark names, paper titles, URLs, and common AI terms such as LLM, RAG, RL, VLM, Transformer in English when that is clearer.
+4. Do not translate proper nouns mechanically.

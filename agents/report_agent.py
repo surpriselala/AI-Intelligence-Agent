@@ -126,12 +126,12 @@ def _build_chinese_report_section(
             lines.extend(
                 [
                     f"### 论文 {index}：{paper.get('title', '未命名论文')}",
-                    f"- 摘要：{paper.get('chinese_summary', paper.get('one_sentence_summary', '待补充'))}",
-                    f"- 研究问题：{paper.get('chinese_research_problem', paper.get('research_problem', '待补充'))}",
-                    f"- 核心方法：{paper.get('chinese_core_method', paper.get('core_method', '待补充'))}",
-                    f"- 创新点：{paper.get('chinese_innovation', paper.get('innovation', '待补充'))}",
-                    f"- 重要性：{paper.get('chinese_why_it_matters', paper.get('why_it_matters', '待补充'))}",
-                    f"- 学习价值：{paper.get('chinese_learning_value', paper.get('learning_value', '待补充'))}",
+                    f"- 摘要：{paper.get('chinese_summary', '待补充')}",
+                    f"- 研究问题：{paper.get('chinese_research_problem', '待补充')}",
+                    f"- 核心方法：{paper.get('chinese_core_method', '待补充')}",
+                    f"- 创新点：{paper.get('chinese_innovation', '待补充')}",
+                    f"- 重要性：{paper.get('chinese_why_it_matters', '待补充')}",
+                    f"- 学习价值：{paper.get('chinese_learning_value', '待补充')}",
                     f"- 链接：{paper.get('url', '')}",
                     "",
                 ]
@@ -146,12 +146,12 @@ def _build_chinese_report_section(
             lines.extend(
                 [
                     f"### 项目 {index}：{repo.get('name', '未命名项目')}",
-                    f"- 摘要：{repo.get('chinese_summary', repo.get('one_sentence_summary', '待补充'))}",
-                    f"- 主要功能：{repo.get('chinese_main_features', repo.get('main_features', '待补充'))}",
-                    f"- 技术亮点：{repo.get('chinese_technical_highlights', repo.get('technical_highlights', '待补充'))}",
-                    f"- 学习价值：{repo.get('chinese_learning_value', repo.get('learning_value', '待补充'))}",
-                    f"- 推荐人群：{repo.get('chinese_recommended_for', repo.get('recommended_for', '待补充'))}",
-                    f"- 使用场景：{repo.get('chinese_possible_use_cases', repo.get('possible_use_cases', '待补充'))}",
+                    f"- 摘要：{repo.get('chinese_summary', '待补充')}",
+                    f"- 主要功能：{repo.get('chinese_main_features', '待补充')}",
+                    f"- 技术亮点：{repo.get('chinese_technical_highlights', '待补充')}",
+                    f"- 学习价值：{repo.get('chinese_learning_value', '待补充')}",
+                    f"- 推荐人群：{repo.get('chinese_recommended_for', '待补充')}",
+                    f"- 使用场景：{repo.get('chinese_possible_use_cases', '待补充')}",
                     f"- Stars：{repo.get('stars', 0)}",
                     f"- 链接：{repo.get('url', '')}",
                     "",

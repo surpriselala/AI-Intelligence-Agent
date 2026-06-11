@@ -10,7 +10,9 @@ Selection criteria:
 4. Code or documentation quality
 5. Popularity or recent attention
 
-Return the result in JSON format.
+Return JSON only with this schema:
+
+{{"selected_indices": [0, 1, 2]}}
 
 Candidate repositories:
 {repos}
