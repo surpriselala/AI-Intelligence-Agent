@@ -8,9 +8,11 @@ from dotenv import load_dotenv
 
 from config import (
     AI_KEYWORDS,
+    BASE_DIR,
     OPENAI_GITHUB_SELECTION_MODEL,
     OPENAI_GITHUB_SUMMARY_MODEL,
 )
+from tools.github_tool import fetch_repository_readme
 
 
 GITHUB_SUMMARY_FALLBACK = "待配置 OPENAI_API_KEY 后生成 GitHub 项目中文摘要。"
@@ -18,11 +20,46 @@ GITHUB_SUMMARY_FIELDS = [
     "one_sentence_summary",
     "chinese_summary",
     "main_features",
+    "chinese_main_features",
     "technical_highlights",
+    "chinese_technical_highlights",
     "learning_value",
+    "chinese_learning_value",
     "recommended_for",
+    "chinese_recommended_for",
     "possible_use_cases",
+    "chinese_possible_use_cases",
 ]
+GITHUB_SELECTION_PROMPT_FALLBACK = (
+    "Select the top AI GitHub repositories for a daily intelligence report.\n"
+    "Prioritize relevance to LLMs, AI agents, RAG, multimodal AI, AI coding, "
+    "practical usefulness, learning value, project quality, and popularity.\n"
+    "Return JSON only with this schema: {{\"selected_indices\": [0, 1]}}.\n"
+    "Select at most {top_k} repositories.\n\n"
+    "Candidate repositories:\n{repos}"
+)
+GITHUB_SUMMARY_PROMPT_FALLBACK = (
+    "Summarize this AI GitHub repository for developers and AI learners.\n"
+    "Return JSON only with these string fields:\n"
+    "one_sentence_summary, chinese_summary, main_features, chinese_main_features, "
+    "technical_highlights, chinese_technical_highlights, learning_value, "
+    "chinese_learning_value, recommended_for, chinese_recommended_for, "
+    "possible_use_cases, chinese_possible_use_cases.\n"
+    "Do not merely repeat the description. If information is insufficient, say so "
+    "instead of inventing details. Chinese fields should be natural Simplified "
+    "Chinese sentences; keep repository names, library names, product names, model "
+    "names, CLI commands, URLs, and common AI terms such as LLM, RAG, RL, VLM, "
+    "Transformer in English when that is clearer.\n\n"
+    "Repository name: {name}\n"
+    "Description: {description}\n"
+    "Stars: {stars}\n"
+    "Language: {language}\n"
+    "Topics: {topics}\n"
+    "Homepage: {homepage}\n"
+    "License: {license}\n"
+    "URL: {url}\n\n"
+    "README excerpt:\n{readme_excerpt}"
+)
 
 
 def select_important_repositories(
@@ -60,10 +97,15 @@ def summarize_repository(repo: dict[str, Any]) -> dict[str, Any]:
         "one_sentence_summary": description,
         "chinese_summary": GITHUB_SUMMARY_FALLBACK,
         "main_features": description or "TBD",
+        "chinese_main_features": "待配置 OPENAI_API_KEY 后生成中文主要功能。",
         "technical_highlights": "TBD",
+        "chinese_technical_highlights": "待配置 OPENAI_API_KEY 后生成中文技术亮点。",
         "learning_value": "TBD",
+        "chinese_learning_value": "待配置 OPENAI_API_KEY 后生成中文学习价值。",
         "recommended_for": "TBD",
+        "chinese_recommended_for": "待配置 OPENAI_API_KEY 后生成中文推荐人群。",
         "possible_use_cases": "TBD",
+        "chinese_possible_use_cases": "待配置 OPENAI_API_KEY 后生成中文使用场景。",
         "stars": repo.get("stars", 0),
         "url": repo.get("url", ""),
     }
@@ -122,17 +164,16 @@ def _select_repositories_with_openai(
             "description": repo.get("description", ""),
             "stars": repo.get("stars", 0),
             "language": repo.get("language", ""),
+            "topics": repo.get("topics", []),
             "url": repo.get("url", ""),
         }
         for index, repo in enumerate(repos)
     ]
-    prompt = (
-        "Select the top AI GitHub repositories for a daily intelligence report.\n"
-        "Prioritize relevance to LLMs, AI agents, RAG, multimodal AI, AI coding, "
-        "practical usefulness, learning value, project quality, and popularity.\n"
-        f"Return JSON only with this schema: {{\"selected_indices\": [0, 1]}}.\n"
-        f"Select at most {top_k} repositories.\n\n"
-        f"Candidate repositories:\n{json.dumps(candidates, ensure_ascii=False)}"
+    prompt = _format_prompt_template(
+        filename="github_selection_prompt.txt",
+        fallback=GITHUB_SELECTION_PROMPT_FALLBACK,
+        top_k=top_k,
+        repos=json.dumps(candidates, ensure_ascii=False),
     )
 
     try:
@@ -161,16 +202,19 @@ def _summarize_repository_with_openai(
 ) -> dict[str, Any] | None:
     """Use OpenAI to generate a structured repository summary."""
     model = os.getenv("OPENAI_GITHUB_SUMMARY_MODEL", OPENAI_GITHUB_SUMMARY_MODEL)
-    prompt = (
-        "Summarize this AI GitHub repository for developers and AI learners.\n"
-        "Return JSON only with these string fields:\n"
-        "one_sentence_summary, chinese_summary, main_features, technical_highlights, "
-        "learning_value, recommended_for, possible_use_cases.\n\n"
-        f"Repository name: {repo.get('name', 'Unnamed repository')}\n"
-        f"Description: {repo.get('description', '')}\n"
-        f"Stars: {repo.get('stars', 0)}\n"
-        f"Language: {repo.get('language', '')}\n"
-        f"URL: {repo.get('url', '')}"
+    readme_excerpt = fetch_repository_readme(str(repo.get("name", "")))
+    prompt = _format_prompt_template(
+        filename="github_summary_prompt.txt",
+        fallback=GITHUB_SUMMARY_PROMPT_FALLBACK,
+        name=repo.get("name", "Unnamed repository"),
+        description=repo.get("description", ""),
+        stars=repo.get("stars", 0),
+        language=repo.get("language", ""),
+        topics=", ".join(repo.get("topics", [])) if repo.get("topics") else "None",
+        homepage=repo.get("homepage", ""),
+        license=repo.get("license", ""),
+        url=repo.get("url", ""),
+        readme_excerpt=readme_excerpt or "No README excerpt available.",
     )
 
     try:
@@ -193,6 +237,31 @@ def _summarize_repository_with_openai(
     return summary or None
 
 
+def _format_prompt_template(
+    filename: str,
+    fallback: str,
+    **values: Any,
+) -> str:
+    """Load a prompt template and format it with a fallback on any failure."""
+    template = _load_prompt_template(filename, fallback)
+    try:
+        return template.format(**values)
+    except Exception as error:
+        print(f"Failed to format prompt template {filename}: {error}")
+        return fallback.format(**values)
+
+
+def _load_prompt_template(filename: str, fallback: str) -> str:
+    """Load a prompt template from prompts/, falling back to an inline template."""
+    prompt_path = BASE_DIR / "prompts" / filename
+    try:
+        template = prompt_path.read_text(encoding="utf-8").strip()
+        return template or fallback
+    except OSError as error:
+        print(f"Failed to load prompt template {filename}: {error}")
+        return fallback
+
+
 def _merge_repository_summary(
     repo: dict[str, Any],
     generated_summary: dict[str, Any],
@@ -209,10 +278,21 @@ def _merge_repository_summary(
             GITHUB_SUMMARY_FALLBACK,
         ),
         "main_features": description or "TBD",
+        "chinese_main_features": generated_summary.get("chinese_main_features", "待补充"),
         "technical_highlights": "TBD",
+        "chinese_technical_highlights": generated_summary.get(
+            "chinese_technical_highlights",
+            "待补充",
+        ),
         "learning_value": "TBD",
+        "chinese_learning_value": generated_summary.get("chinese_learning_value", "待补充"),
         "recommended_for": "TBD",
+        "chinese_recommended_for": generated_summary.get("chinese_recommended_for", "待补充"),
         "possible_use_cases": "TBD",
+        "chinese_possible_use_cases": generated_summary.get(
+            "chinese_possible_use_cases",
+            "待补充",
+        ),
         "stars": repo.get("stars", 0),
         "url": repo.get("url", ""),
     }

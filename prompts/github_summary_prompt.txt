@@ -14,16 +14,41 @@ Stars:
 Language:
 {language}
 
+Topics:
+{topics}
+
+Homepage:
+{homepage}
+
+License:
+{license}
+
 URL:
 {url}
 
-Please output the following fields:
+README excerpt:
+{readme_excerpt}
+
+Please return JSON only with the following string fields:
 
 1. one_sentence_summary
-2. main_features
-3. technical_highlights
-4. learning_value
-5. recommended_for
-6. possible_use_cases
+2. chinese_summary
+3. main_features
+4. chinese_main_features
+5. technical_highlights
+6. chinese_technical_highlights
+7. learning_value
+8. chinese_learning_value
+9. recommended_for
+10. chinese_recommended_for
+11. possible_use_cases
+12. chinese_possible_use_cases
 
-Use concise and clear language.
+Rules:
+1. Do not merely repeat the repository description.
+2. Use the README excerpt when it contains useful details.
+3. If information is insufficient, say so clearly instead of inventing details.
+4. English fields should be concise English.
+5. Chinese fields should be natural Simplified Chinese sentences.
+6. Keep repository names, library names, product names, model names, CLI commands, URLs, and common AI terms such as LLM, RAG, RL, VLM, Transformer in English when that is clearer.
+7. Do not translate proper nouns mechanically.

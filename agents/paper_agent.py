@@ -19,10 +19,15 @@ PAPER_SUMMARY_FIELDS = [
     "one_sentence_summary",
     "chinese_summary",
     "research_problem",
+    "chinese_research_problem",
     "core_method",
+    "chinese_core_method",
     "innovation",
+    "chinese_innovation",
     "why_it_matters",
+    "chinese_why_it_matters",
     "learning_value",
+    "chinese_learning_value",
 ]
 
 
@@ -59,10 +64,15 @@ def summarize_paper(paper: dict[str, Any]) -> dict[str, Any]:
         "one_sentence_summary": summary,
         "chinese_summary": _translate_text_to_chinese(summary),
         "research_problem": "TBD",
+        "chinese_research_problem": "待配置 OPENAI_API_KEY 后生成中文研究问题。",
         "core_method": "TBD",
+        "chinese_core_method": "待配置 OPENAI_API_KEY 后生成中文核心方法。",
         "innovation": "TBD",
+        "chinese_innovation": "待配置 OPENAI_API_KEY 后生成中文创新点。",
         "why_it_matters": "TBD",
+        "chinese_why_it_matters": "待配置 OPENAI_API_KEY 后生成中文重要性。",
         "learning_value": "TBD",
+        "chinese_learning_value": "待配置 OPENAI_API_KEY 后生成中文学习价值。",
         "url": paper.get("url", ""),
     }
 
@@ -163,8 +173,14 @@ def _summarize_paper_with_openai(
     prompt = (
         "Summarize this AI research paper for developers and AI learners.\n"
         "Return JSON only with these string fields:\n"
-        "one_sentence_summary, chinese_summary, research_problem, core_method, "
-        "innovation, why_it_matters, learning_value.\n\n"
+        "one_sentence_summary, chinese_summary, research_problem, "
+        "chinese_research_problem, core_method, chinese_core_method, innovation, "
+        "chinese_innovation, why_it_matters, chinese_why_it_matters, learning_value, "
+        "chinese_learning_value.\n"
+        "English fields should be concise English. Chinese fields should be natural "
+        "Simplified Chinese sentences; keep model names, method names, benchmark names, "
+        "paper titles, URLs, and common AI terms such as LLM, RAG, RL, VLM, Transformer "
+        "in English when that is clearer.\n\n"
         f"Title: {title}\n\n"
         f"Abstract: {abstract}"
     )
@@ -204,10 +220,15 @@ def _merge_paper_summary(
         "one_sentence_summary": fallback_summary,
         "chinese_summary": chinese_summary,
         "research_problem": "TBD",
+        "chinese_research_problem": generated_summary.get("chinese_research_problem", "待补充"),
         "core_method": "TBD",
+        "chinese_core_method": generated_summary.get("chinese_core_method", "待补充"),
         "innovation": "TBD",
+        "chinese_innovation": generated_summary.get("chinese_innovation", "待补充"),
         "why_it_matters": "TBD",
+        "chinese_why_it_matters": generated_summary.get("chinese_why_it_matters", "待补充"),
         "learning_value": "TBD",
+        "chinese_learning_value": generated_summary.get("chinese_learning_value", "待补充"),
         "url": paper.get("url", ""),
     }
     merged.update(generated_summary)
