@@ -1,0 +1,18 @@
+You are an AI industry intelligence analyst.
+
+The following are candidate AI industry news items collected today.
+Please select the top {top_k} news items that are most worth reading.
+
+Selection criteria:
+1. Relevance to AI developers, researchers, or AI product builders
+2. Company announcements, model releases, API changes, developer tools, safety updates, or research releases
+3. Practical impact or strategic importance
+4. Novelty and learning value
+5. Preference for official or high-signal sources
+
+Return JSON only with this schema:
+
+{{"selected_indices": [0, 1, 2]}}
+
+Candidate news:
+{news_items}

@@ -35,6 +35,36 @@ class ReportAgentTest(unittest.TestCase):
         self.assertIn("- Summary: English summary", report)
         self.assertIn("- 摘要：中文摘要", report)
 
+    def test_build_daily_report_includes_news_when_provided(self) -> None:
+        report = build_daily_report(
+            paper_summaries=[],
+            repo_summaries=[],
+            news_summaries=[
+                {
+                    "title": "Example News",
+                    "source": "Example Source",
+                    "one_sentence_summary": "English news summary",
+                    "chinese_summary": "中文新闻摘要",
+                    "what_happened": "Something happened",
+                    "chinese_what_happened": "发生了一件事",
+                    "why_it_matters": "Important",
+                    "chinese_why_it_matters": "很重要",
+                    "impact": "Developer impact",
+                    "chinese_impact": "开发者影响",
+                    "related_technologies": "LLM",
+                    "chinese_related_technologies": "LLM",
+                    "url": "https://example.com/news",
+                }
+            ],
+        )
+
+        self.assertIn("## 3. Industry News", report)
+        self.assertIn("- Source: Example Source", report)
+        self.assertIn("- What Happened: Something happened", report)
+        self.assertIn("## 3. 行业新闻", report)
+        self.assertIn("- 摘要：中文新闻摘要", report)
+        self.assertIn("- 发生了什么：发生了一件事", report)
+
     def test_save_report_creates_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = Path(temp_dir) / "daily_ai_report.md"
