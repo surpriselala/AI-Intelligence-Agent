@@ -17,6 +17,9 @@ class NewsToolTest(unittest.TestCase):
     def test_collect_ai_news_returns_empty_for_empty_feeds(self) -> None:
         self.assertEqual(collect_ai_news(max_results=3, feeds=[]), [])
 
+    def test_collect_ai_news_returns_empty_for_invalid_per_feed_limit(self) -> None:
+        self.assertEqual(collect_ai_news(max_results=3, feeds=[], per_feed_limit=0), [])
+
     def test_collect_ai_news_parses_feed_entries(self) -> None:
         fake_entry = {
             "title": " New\nAI  Model ",
@@ -54,8 +57,38 @@ class NewsToolTest(unittest.TestCase):
             ],
         )
 
+    def test_collect_ai_news_limits_items_per_feed(self) -> None:
+        entries = [
+            {
+                "title": f"News {index}",
+                "summary": "Summary",
+                "link": f"https://example.com/{index}",
+                "published": "2026-06-11",
+            }
+            for index in range(5)
+        ]
+        fake_feedparser = SimpleNamespace(
+            parse=lambda url: SimpleNamespace(entries=entries)
+        )
+
+        with patch.dict("sys.modules", {"feedparser": fake_feedparser}):
+            news_items = collect_ai_news(
+                max_results=10,
+                per_feed_limit=3,
+                feeds=[
+                    {
+                        "name": "Example Feed",
+                        "url": "https://example.com/rss",
+                        "source_type": "rss",
+                    }
+                ],
+            )
+
+        self.assertEqual(len(news_items), 3)
+        self.assertEqual([item["title"] for item in news_items], ["News 0", "News 1", "News 2"])
+
     def test_collect_ai_news_skips_failed_feed(self) -> None:
-        def raise_error(url):
+        def raise_error(*args, **kwargs):
             raise RuntimeError("feed failed")
 
         fake_feedparser = SimpleNamespace(parse=raise_error)

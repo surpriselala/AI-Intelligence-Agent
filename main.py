@@ -7,12 +7,16 @@ from agents.report_agent import build_daily_report, get_daily_report_path, save_
 from config import (
     AI_KEYWORDS,
     ARXIV_MAX_RESULTS,
+    BASE_DIR,
+    GITHUB_SELECTION_TOP_K,
     GITHUB_MAX_RESULTS,
+    NEWS_SELECTION_TOP_K,
     NEWS_MAX_RESULTS,
+    PAPER_SELECTION_TOP_K,
     REPORT_FILENAME_PREFIX,
     REPORT_OUTPUT_DIR,
-    SELECTION_TOP_K,
 )
+from tools.dashboard_data_tool import build_dashboard_data
 from tools.arxiv_tool import search_arxiv_papers
 from tools.github_tool import search_github_repositories
 from tools.news_tool import collect_ai_news
@@ -26,9 +30,9 @@ def main() -> None:
     repos = search_github_repositories(query, max_results=GITHUB_MAX_RESULTS)
     news_items = collect_ai_news(max_results=NEWS_MAX_RESULTS)
 
-    selected_papers = select_important_papers(papers, top_k=SELECTION_TOP_K)
-    selected_repos = select_important_repositories(repos, top_k=SELECTION_TOP_K)
-    selected_news = select_important_news(news_items, top_k=SELECTION_TOP_K)
+    selected_papers = select_important_papers(papers, top_k=PAPER_SELECTION_TOP_K)
+    selected_repos = select_important_repositories(repos, top_k=GITHUB_SELECTION_TOP_K)
+    selected_news = select_important_news(news_items, top_k=NEWS_SELECTION_TOP_K)
 
     paper_summaries = [summarize_paper(paper) for paper in selected_papers]
     repo_summaries = [summarize_repository(repo) for repo in selected_repos]
@@ -44,7 +48,10 @@ def main() -> None:
         filename_prefix=REPORT_FILENAME_PREFIX,
     )
     save_report(report, output_path)
+    dashboard_data_path = BASE_DIR / "frontend" / "data" / "dashboard_data.js"
+    build_dashboard_data(REPORT_OUTPUT_DIR, dashboard_data_path)
     print(f"Report saved to {output_path}")
+    print(f"Dashboard data saved to {dashboard_data_path}")
 
 
 if __name__ == "__main__":
