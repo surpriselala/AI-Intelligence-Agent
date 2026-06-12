@@ -94,8 +94,12 @@ def _build_english_report_section(
                 lines.extend(
                     [
                         f"### News {index}: {news.get('title', 'Untitled news')}",
-                        f"- Summary: {news.get('summary', 'TBD')}",
+                        f"- Source: {news.get('source', '')}",
+                        f"- Summary: {news.get('one_sentence_summary', news.get('summary', 'TBD'))}",
+                        f"- What Happened: {news.get('what_happened', 'TBD')}",
+                        f"- Why It Matters: {news.get('why_it_matters', 'TBD')}",
                         f"- Impact: {news.get('impact', 'TBD')}",
+                        f"- Related Technologies: {news.get('related_technologies', 'TBD')}",
                         f"- Link: {news.get('url', '')}",
                         "",
                     ]
@@ -167,8 +171,12 @@ def _build_chinese_report_section(
                 lines.extend(
                     [
                         f"### 新闻 {index}：{news.get('title', '未命名新闻')}",
-                        f"- 摘要：{news.get('chinese_summary', news.get('summary', '待补充'))}",
-                        f"- 影响：{news.get('chinese_impact', news.get('impact', '待补充'))}",
+                        f"- 来源：{news.get('source', '')}",
+                        f"- 摘要：{news.get('chinese_summary', '待补充')}",
+                        f"- 发生了什么：{news.get('chinese_what_happened', '待补充')}",
+                        f"- 重要性：{news.get('chinese_why_it_matters', '待补充')}",
+                        f"- 影响：{news.get('chinese_impact', '待补充')}",
+                        f"- 相关技术：{news.get('chinese_related_technologies', '待补充')}",
                         f"- 链接：{news.get('url', '')}",
                         "",
                     ]
