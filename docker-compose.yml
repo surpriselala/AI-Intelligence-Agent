@@ -1,0 +1,12 @@
+services:
+  ai-intelligence-agent:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      TZ: Asia/Shanghai
+    volumes:
+      - ./outputs:/app/outputs
+      - ./frontend/data:/app/frontend/data
+    command: python main.py

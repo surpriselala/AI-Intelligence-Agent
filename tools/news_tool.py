@@ -3,15 +3,16 @@
 from html.parser import HTMLParser
 from typing import Any
 
-from config import NEWS_FEEDS
+from config import NEWS_FEEDS, NEWS_PER_FEED_LIMIT
 
 
 def collect_ai_news(
     max_results: int = 10,
     feeds: list[dict[str, str]] | None = None,
+    per_feed_limit: int = NEWS_PER_FEED_LIMIT,
 ) -> list[dict[str, Any]]:
     """Collect AI news from configured RSS feeds."""
-    if max_results <= 0:
+    if max_results <= 0 or per_feed_limit <= 0:
         return []
 
     try:
@@ -29,13 +30,17 @@ def collect_ai_news(
         try:
             parsed_feed = feedparser.parse(feed_config.get("url", ""))
             entries = getattr(parsed_feed, "entries", [])
+            feed_item_count = 0
             for entry in entries:
                 try:
                     news_items.append(_news_entry_to_dict(entry, feed_config))
+                    feed_item_count += 1
                 except Exception as error:
                     print(f"Failed to parse news entry: {error}")
                 if len(news_items) >= max_results:
                     return news_items
+                if feed_item_count >= per_feed_limit:
+                    break
         except Exception as error:
             print(f"Failed to parse news feed {feed_config.get('name', '')}: {error}")
 
