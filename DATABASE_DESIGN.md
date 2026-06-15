@@ -9,15 +9,15 @@
 1. 每日采集 AI 论文、新闻和 GitHub 项目。
 2. 使用 LLM 对内容进行筛选和中英文总结。
 3. 生成 Markdown 日报。
-4. 根据 Markdown 日报生成 `frontend/data/dashboard_data.js`。
-5. 使用静态前端 Dashboard 展示最新内容、历史内容和分页列表。
+4. 将日报和入选内容写入 PostgreSQL。
+5. 使用 React Dashboard 展示前端页面框架。
 
 因此，数据库的第一阶段目标不是重写现有系统，而是增加持久化能力：
 
 ```text
 现有采集与报告流程继续保留
 数据库先作为历史存储层和后续扩展基础
-前端暂时继续读取 dashboard_data.js
+React 前端后续通过 FastAPI 读取数据库
 ```
 
 ---
@@ -55,19 +55,17 @@ agents 层筛选与总结
         ↓
 report_agent 生成 Markdown 日报
         ↓
-tools/dashboard_data_tool.py 生成 dashboard_data.js
+写入 PostgreSQL
         ↓
-静态 Dashboard 展示
+后续 FastAPI / React Dashboard 读取数据库
 ```
 
-这个流程已经可以运行，所以数据库第一阶段应该作为旁路保存：
+这个流程已经可以运行，所以数据库第一阶段先作为结果持久化层：
 
 ```text
 生成 Markdown 日报
         ↓
 保存日报文件
-        ↓
-生成 dashboard_data.js
         ↓
 同步写入 PostgreSQL
 ```
@@ -75,7 +73,7 @@ tools/dashboard_data_tool.py 生成 dashboard_data.js
 这样做的好处是：
 
 1. 不影响当前可运行的日报生成。
-2. 不需要马上改前端。
+2. 不需要马上完成 FastAPI 数据接口。
 3. 数据库失败时，可以先不阻塞整个报告流程。
 4. 后续可以逐步把数据库变成主数据源。
 
@@ -546,8 +544,7 @@ Articles 和 News 适合更新：
 2. LLM 筛选和总结
 3. 生成 Markdown report
 4. 保存 Markdown report 到 outputs/
-5. 生成 frontend/data/dashboard_data.js
-6. 将本次 run、report、items 写入数据库
+5. 将本次 run、report、items 写入数据库
 ```
 
 数据库写入失败时，建议：
@@ -576,7 +573,7 @@ AI-Intelligence-Agent/
 ├── tools/
 ├── agents/
 ├── prompts/
-├── frontend/
+├── frontend-react/
 ├── outputs/
 └── tests/
 ```
@@ -691,14 +688,13 @@ CREATE INDEX idx_github_stars ON github_repositories(stars DESC);
 4. 增加一个初始化表结构的方法。
 5. 在 `main.py` 报告生成完成后调用数据库保存逻辑。
 6. 写测试验证数据库保存逻辑。
-7. 运行一次完整日报，确认 Markdown、Dashboard 和数据库三者都正常。
+7. 运行一次完整日报，确认 Markdown 报告和数据库写入正常。
 
 第一阶段不改：
 
-1. `frontend/app.js`
-2. `frontend/data/dashboard_data.js` 的生成方式
-3. Dashboard 的分页逻辑
-4. 报告 Markdown 格式
+1. React 前端的数据接入方式
+2. Dashboard 的分页逻辑
+3. 报告 Markdown 格式
 
 ---
 
@@ -801,7 +797,7 @@ GET /api/reports/{report_date}
 
 这时后端分页才有意义。
 
-原因是当数据量增长后，前端不应该加载全部历史数据。但在当前静态 Dashboard 阶段，分页已经由前端完成，不需要提前迁移。
+原因是当数据量增长后，前端不应该加载全部历史数据。当前 React 前端仍使用本地 mock data，正式数据分页应在 FastAPI 接入时完成。
 
 ---
 

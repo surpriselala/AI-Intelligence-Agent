@@ -10,7 +10,6 @@ from agents.report_agent import build_daily_report, get_daily_report_path, save_
 from config import (
     AI_KEYWORDS,
     ARXIV_MAX_RESULTS,
-    BASE_DIR,
     GITHUB_SELECTION_TOP_K,
     GITHUB_MAX_RESULTS,
     NEWS_SELECTION_TOP_K,
@@ -21,7 +20,6 @@ from config import (
 )
 from database.db import get_database_url
 from database.repository import save_daily_report_result
-from tools.dashboard_data_tool import build_dashboard_data
 from tools.arxiv_tool import search_arxiv_papers
 from tools.github_tool import search_github_repositories
 from tools.news_tool import collect_ai_news
@@ -64,8 +62,6 @@ def main() -> None:
         report_date=report_date,
     )
     save_report(report, output_path)
-    dashboard_data_path = BASE_DIR / "frontend" / "data" / "dashboard_data.js"
-    build_dashboard_data(REPORT_OUTPUT_DIR, dashboard_data_path)
     _persist_report_if_configured(
         report_date=report_date,
         report=report,
@@ -75,7 +71,6 @@ def main() -> None:
         news_summaries=news_summaries,
     )
     print(f"Report saved to {output_path}")
-    print(f"Dashboard data saved to {dashboard_data_path}")
 
 
 def _merge_source_and_summary(

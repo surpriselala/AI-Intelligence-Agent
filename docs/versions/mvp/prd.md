@@ -195,28 +195,15 @@ report_items
 
 ---
 
-### 6.6 前端 Dashboard
+### 6.6 React 前端 Dashboard
 
-MVP 包含两个前端阶段：
-
-```text
-1. 旧静态 Dashboard
-2. React Dashboard 框架
-```
-
-旧静态 Dashboard：
-
-```text
-frontend/
-```
-
-React Dashboard：
+MVP 最终保留 React Dashboard：
 
 ```text
 frontend-react/
 ```
 
-React 当前阶段先使用 mock data，后续版本接入 FastAPI。
+React 当前阶段先使用 mock data，后续版本接入 FastAPI。旧静态 `frontend/` 已删除。
 
 ---
 
@@ -248,8 +235,8 @@ MVP 完成后应满足：
 5. OpenAI API key 配置后可以生成 LLM 总结。
 6. PostgreSQL 配置后可以写入数据库。
 7. 数据库中可以看到 `runs`、`reports`、`articles`、`news`、`github_repositories`、`report_items` 数据。
-8. 静态 Dashboard 可以展示历史报告数据。
-9. React Dashboard 可以启动和构建。
+8. React Dashboard 可以启动和构建。
+9. React Dashboard 支持 Dashboard / Articles / News / GitHub Projects 路由。
 10. 单元测试通过。
 
 ---
