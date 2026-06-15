@@ -3,3 +3,5 @@ requests
 python-dotenv
 feedparser
 arxiv
+sqlalchemy
+psycopg2-binary

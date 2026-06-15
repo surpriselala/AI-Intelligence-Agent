@@ -1,5 +1,9 @@
 # Development Document / 开发文档
 
+> Current documentation system: versioned PRD and development reports are now maintained under `docs/`.
+> The current MVP baseline is documented in `docs/versions/mvp/`.
+> This file is kept as the original high-level development background.
+
 ## English Version
 
 ### 1. Development Background

@@ -392,7 +392,7 @@ build_daily_report()
 ```text
 tools/arxiv_tool.py
 tests/test_arxiv_tool.py
-developmentDoc/article_fetching_development.md
+docs/versions/mvp/development_notes/article_fetching_development.md
 ```
 
 ---
