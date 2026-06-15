@@ -586,7 +586,7 @@ paper_summaries = [summarize_paper(paper) for paper in selected_papers]
 agents/paper_agent.py
 config.py
 tests/test_paper_agent.py
-developmentDoc/paper_summary_development.md
+docs/versions/mvp/development_notes/paper_summary_development.md
 ```
 
 ---
