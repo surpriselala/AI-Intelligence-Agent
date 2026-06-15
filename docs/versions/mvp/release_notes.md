@@ -35,19 +35,15 @@ MVP 版本完成了 AI Intelligence Agent 的基础可运行链路。
 
 ---
 
-### 2.4 Dashboard
+### 2.4 React Dashboard
 
-新增基础 Dashboard：
-
-```text
-frontend/
-```
-
-新增 React Dashboard 框架：
+新增 React Dashboard：
 
 ```text
 frontend-react/
 ```
+
+旧静态 `frontend/` 已删除，当前只保留 React 前端。
 
 ---
 
@@ -123,7 +119,7 @@ npm run dev
 3. 当前没有真实评分系统。
 4. Dashboard 数据源仍然处于过渡阶段。
 5. Docker Compose 还没有完整拆分多服务。
-6. 旧静态前端仍保留。
+6. React 前端需要通过 `npm run dev` 独立启动，尚未由 Docker Compose 托管。
 
 ---
 

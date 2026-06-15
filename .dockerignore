@@ -8,4 +8,7 @@ __pycache__/
 .env
 outputs/
 data/
+frontend-react/node_modules/
+frontend-react/dist/
+frontend-react/*.tsbuildinfo
 .DS_Store

@@ -104,42 +104,40 @@ outputs/
 
 ---
 
-### 2.5 Dashboard 数据生成
+### 2.5 Legacy Dashboard 数据生成
 
 相关文件：
 
 ```text
 tools/dashboard_data_tool.py
-frontend/data/dashboard_data.js
 ```
 
 完成内容：
 
-1. 从历史 Markdown 报告解析 Dashboard 数据。
-2. 生成 `window.AI_DASHBOARD_DATA`。
-3. 支持历史内容聚合。
-4. 支持 Dashboard 每类展示 4 条。
-5. 支持列表页每页 10 条。
+1. 早期版本从历史 Markdown 报告解析 Dashboard 数据。
+2. 早期版本生成 `window.AI_DASHBOARD_DATA`。
+3. 该能力已从当前主流程中移除。
+4. 当前保留工具和测试作为历史兼容能力。
 
 ---
 
-### 2.6 静态前端 Dashboard
+### 2.6 React 前端 Dashboard
 
 相关文件：
 
 ```text
-frontend/index.html
-frontend/styles.css
-frontend/app.js
+frontend-react/
 ```
 
 完成内容：
 
 1. 支持 Dashboard 首页。
-2. 支持 Articles / News / GitHub Projects 页面。
+2. 支持 Articles / News / GitHub Projects 路由。
 3. 支持搜索。
-4. 支持分页。
-5. 支持固定侧边栏和主体滚动。
+4. 支持主题筛选。
+5. 支持分页。
+6. 支持固定侧边栏和主体滚动。
+7. 搜索框和主题筛选状态已分离。
 
 ---
 
@@ -193,12 +191,13 @@ docker-compose.yml
 1. 支持 Docker build。
 2. 支持 `docker compose up` 运行一次日报生成。
 3. 支持 `.env` 注入环境变量。
-4. 支持挂载 `outputs/` 和 `frontend/data/`。
+4. 支持挂载 `outputs/`。
 
 说明：
 
 ```text
-当前容器不是常驻服务，而是执行一次 python main.py 后退出。
+当前 Docker 容器不是前端服务，也不是常驻服务，而是执行一次 python main.py 后退出。
+React 前端通过 frontend-react 下的 npm run dev 启动。
 ```
 
 ---
@@ -238,7 +237,6 @@ docs/versions/mvp/development_notes/frontend_react_revision_report.md
 
 ```text
 outputs/daily_ai_report_YYYY-MM-DD.md
-frontend/data/dashboard_data.js
 PostgreSQL database records
 ```
 
@@ -307,9 +305,8 @@ React 路由检查：
 2. 还没有 FastAPI 后端。
 3. 前端尚未直接读取 PostgreSQL。
 4. 评分字段存在，但评分系统尚未实现。
-5. Docker Compose 还没有拆分 agent / api / frontend / postgres。
-6. 旧静态前端和新 React 前端并存。
-7. 数据库迁移工具 Alembic 尚未接入。
+5. Docker Compose 当前只运行 agent，尚未包含 frontend / api / postgres 服务。
+6. 数据库迁移工具 Alembic 尚未接入。
 
 ---
 
