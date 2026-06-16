@@ -1,65 +1,69 @@
-import { mockDashboardData } from "./mockData";
-import type { ContentKind, DashboardItem, DashboardPayload, PaginatedResult } from "../types/dashboard";
+import type {
+  ContentKind,
+  DashboardItem,
+  DashboardPayload,
+  ListParams,
+  PaginatedResult,
+} from "../types/dashboard";
 
-const PAGE_SIZE = 10;
+const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(
+  /\/$/,
+  "",
+);
 
-export async function getDashboardData(): Promise<DashboardPayload> {
-  return mockDashboardData;
+interface ApiPaginatedResult<T> {
+  items: T[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
 }
 
-export function filterItems(
-  items: DashboardItem[],
-  query: string,
-  activeTopic = "All",
-): DashboardItem[] {
-  const normalizedQuery = query.trim().toLowerCase();
-  const normalizedTopic = activeTopic === "All" ? "" : activeTopic.trim().toLowerCase();
+const categoryPaths: Record<ContentKind, string> = {
+  articles: "/api/articles",
+  news: "/api/news",
+  projects: "/api/github-projects",
+};
 
-  return items.filter((item) => {
-    const haystack = [
-      item.title,
-      item.summary,
-      item.date,
-      item.source,
-      item.language,
-      ...(item.tags || []),
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    const matchesSearch = !normalizedQuery || haystack.includes(normalizedQuery);
-    const matchesTopic = !normalizedTopic || haystack.includes(normalizedTopic);
-    return matchesSearch && matchesTopic;
-  });
+export async function getDashboardData(
+  params: Pick<ListParams, "query" | "topic"> = {},
+): Promise<DashboardPayload> {
+  return requestJson<DashboardPayload>(withQuery("/api/dashboard", params));
 }
 
-export function paginateItems(
-  items: DashboardItem[],
-  page: number,
-  pageSize = PAGE_SIZE,
-): PaginatedResult<DashboardItem> {
-  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
-  const currentPage = Math.min(Math.max(page, 1), totalPages);
-  const start = (currentPage - 1) * pageSize;
+export async function getArticles(
+  params: ListParams = {},
+): Promise<PaginatedResult<DashboardItem>> {
+  return getArchiveItems("articles", params);
+}
 
+export async function getNews(
+  params: ListParams = {},
+): Promise<PaginatedResult<DashboardItem>> {
+  return getArchiveItems("news", params);
+}
+
+export async function getGithubProjects(
+  params: ListParams = {},
+): Promise<PaginatedResult<DashboardItem>> {
+  return getArchiveItems("projects", params);
+}
+
+export async function getArchiveItems(
+  category: ContentKind,
+  params: ListParams = {},
+): Promise<PaginatedResult<DashboardItem>> {
+  const response = await requestJson<ApiPaginatedResult<DashboardItem>>(
+    withQuery(categoryPaths[category], params),
+  );
   return {
-    items: items.slice(start, start + pageSize),
-    page: currentPage,
-    pageSize,
-    total: items.length,
-    totalPages,
+    items: response.items,
+    page: response.page,
+    pageSize: response.page_size,
+    total: response.total,
+    totalPages: response.total_pages,
   };
-}
-
-export function sortItems(items: DashboardItem[]): DashboardItem[] {
-  return [...items].sort((a, b) => {
-    const scoreDiff = (b.score || 0) - (a.score || 0);
-    if (scoreDiff !== 0) return scoreDiff;
-    const dateDiff = b.date.localeCompare(a.date);
-    if (dateDiff !== 0) return dateDiff;
-    return (a.order || 0) - (b.order || 0);
-  });
 }
 
 export function categoryTitle(category: ContentKind): string {
@@ -69,4 +73,27 @@ export function categoryTitle(category: ContentKind): string {
     projects: "GitHub Projects",
   };
   return labels[category];
+}
+
+async function requestJson<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`);
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+function withQuery(path: string, params: ListParams): string {
+  const search = new URLSearchParams();
+  if (params.page) search.set("page", String(params.page));
+  if (params.pageSize) search.set("page_size", String(params.pageSize));
+
+  const query = params.query?.trim();
+  if (query) search.set("query", query);
+
+  const topic = params.topic?.trim();
+  if (topic && topic !== "All") search.set("topic", topic);
+
+  const queryString = search.toString();
+  return queryString ? `${path}?${queryString}` : path;
 }

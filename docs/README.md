@@ -73,6 +73,13 @@ docs/versions/v0.4-scoring-system/
 docs/versions/v0.5-user-features/
 ```
 
+已创建的后续版本文档：
+
+```text
+docs/versions/v0.2-fastapi-api/development_report.md
+docs/versions/v0.3-react-api-integration/development_report.md
+```
+
 每个版本目录建议包含：
 
 ```text
