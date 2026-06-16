@@ -1,14 +1,16 @@
 import type { ReactNode } from "react";
 import { ContentCard } from "../components/ContentCard";
 import { Pagination } from "../components/Pagination";
-import { categoryTitle, paginateItems } from "../api/dashboardApi";
-import type { ContentKind, DashboardItem } from "../types/dashboard";
+import { categoryTitle } from "../api/dashboardApi";
+import type { ContentKind, DashboardItem, PaginatedResult } from "../types/dashboard";
 
 interface ArchivePageProps {
   category: ContentKind;
-  items: DashboardItem[];
+  result: PaginatedResult<DashboardItem> | null;
   filterBar: ReactNode;
   page: number;
+  isLoading: boolean;
+  errorMessage: string;
   onPageChange: (page: number) => void;
 }
 
@@ -20,8 +22,20 @@ const descriptions: Record<ContentKind, string> = {
     "Today first, then past GitHub project picks, ordered by date until score data exists.",
 };
 
-export function ArchivePage({ category, filterBar, items, onPageChange, page }: ArchivePageProps) {
-  const paginated = paginateItems(items, page);
+export function ArchivePage({
+  category,
+  errorMessage,
+  filterBar,
+  isLoading,
+  onPageChange,
+  page,
+  result,
+}: ArchivePageProps) {
+  const items = result?.items || [];
+  const total = result?.total || 0;
+  const totalPages = result?.totalPages || 1;
+  const currentPage = result?.page || page;
+  const pageSize = result?.pageSize || 10;
 
   return (
     <>
@@ -35,11 +49,20 @@ export function ArchivePage({ category, filterBar, items, onPageChange, page }: 
       <section className="history-section">
         <div className="history-header">
           <h3>{categoryTitle(category)} Archive</h3>
-          <span>{paginated.total} total · 10 per page</span>
+          <span>
+            {total} total · {pageSize} per page
+          </span>
         </div>
         <div className="history-list">
-          {paginated.items.length ? (
-            paginated.items.map((item) => (
+          {errorMessage ? (
+            <div className="api-state api-state-error compact">
+              <h2>Archive data could not be loaded.</h2>
+              <p>{errorMessage}</p>
+            </div>
+          ) : isLoading && !result ? (
+            <div className="empty-state">Loading archive items...</div>
+          ) : items.length ? (
+            items.map((item) => (
               <ContentCard category={category} item={item} key={item.id} />
             ))
           ) : (
@@ -48,12 +71,14 @@ export function ArchivePage({ category, filterBar, items, onPageChange, page }: 
         </div>
       </section>
 
-      <Pagination
-        onPageChange={onPageChange}
-        page={paginated.page}
-        total={paginated.total}
-        totalPages={paginated.totalPages}
-      />
+      {!errorMessage ? (
+        <Pagination
+          onPageChange={onPageChange}
+          page={currentPage}
+          total={total}
+          totalPages={totalPages}
+        />
+      ) : null}
     </>
   );
 }

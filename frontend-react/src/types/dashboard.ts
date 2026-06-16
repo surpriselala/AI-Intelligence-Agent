@@ -26,7 +26,6 @@ export interface DashboardPayload {
     reports: number;
   };
   dashboard: Record<ContentKind, DashboardItem[]>;
-  history: Record<ContentKind, DashboardItem[]>;
 }
 
 export interface PaginatedResult<T> {
@@ -35,4 +34,11 @@ export interface PaginatedResult<T> {
   pageSize: number;
   total: number;
   totalPages: number;
+}
+
+export interface ListParams {
+  page?: number;
+  pageSize?: number;
+  query?: string;
+  topic?: string;
 }
